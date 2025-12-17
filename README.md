@@ -1,229 +1,270 @@
-# Android Development Setup for VS Code
+---
+name: School Escape Game Plan
+overview: Build a side-scrolling Android game where a free kid rescues friends from teachers, avoiding capture and answering questions when caught. Includes level progression through school grades, score management, and standard game features.
+todos:
+  - id: setup-game-engine
+    content: Create GameView, GameEngine, and GameManager classes with basic game loop and state management
+    status: pending
+  - id: create-entities
+    content: Implement Entity base class, Player, Teacher, and Friend classes with basic rendering and movement
+    status: pending
+  - id: implement-collision
+    content: Add collision detection system for player-teacher and player-friend interactions
+    status: pending
+  - id: build-level-system
+    content: Create Level, LevelManager, and LevelData classes with grade-based progression (elementary → PhD)
+    status: pending
+  - id: create-question-system
+    content: Implement Question model, QuestionDatabase, and QuestionManager with difficulty-based question selection
+    status: pending
+  - id: add-question-dialog
+    content: Create QuestionDialog UI for displaying questions when player is caught by teacher
+    status: pending
+  - id: implement-rescue-mechanics
+    content: Add friend rescue logic, score calculation, and win condition (rescue all friends)
+    status: pending
+  - id: create-ui-screens
+    content: Build IntroActivity, HelpActivity, SettingsActivity, and GameOverActivity with proper navigation
+    status: pending
+  - id: add-settings-persistence
+    content: Implement PreferencesManager for storing sound settings and other preferences
+    status: pending
+  - id: implement-score-system
+    content: Create ScoreManager for persisting high scores and tracking progress across sessions
+    status: pending
+  - id: add-visual-assets
+    content: Create simple sprites for player, teachers, friends, and school background elements
+    status: pending
+  - id: update-main-activity
+    content: Transform MainActivity into main menu hub with navigation to all game screens
+    status: pending
+---
 
-This workspace is configured for Android app development using VS Code.
+# School Escape Game - Implementation Plan
 
-## Prerequisites
+## Overview
 
-Before you start, make sure you have the following installed:
+A top-down Android game built with native Canvas/View where a free kid navigates a school environment to rescue friends from teachers. The game progresses through educational levels (elementary → high school → college → PhD) with difficulty-appropriate questions.
 
-### 1. Java Development Kit (JDK)
+## Architecture
 
-- **Required**: JDK 11 or higher (JDK 17 recommended)
-- Download from: [Oracle JDK](https://www.oracle.com/java/technologies/downloads/) or [OpenJDK](https://adoptium.net/)
-- Verify installation:
-  ```powershell
-  java -version
-  ```
+### Core Components
 
-### 2. Android SDK
+- **Game Engine**: Custom game loop using Canvas and View with frame-based updates
+- **Game State Management**: State machine for menu, playing, paused, question, game over states
+- **Entity System**: Base classes for Player, Teacher, Friend entities with collision detection
+- **Question System**: Modular question database with difficulty levels and subject categories
+- **Data Persistence**: SharedPreferences for scores, level progress, and settings
 
-- **Required**: Android SDK (via Android Studio or standalone)
-- Download Android Studio from: [developer.android.com/studio](https://developer.android.com/studio)
-- Or install SDK Command Line Tools only
-
-### 3. Set Environment Variables (Windows)
-
-Add these to your system environment variables:
-
-```powershell
-# Set ANDROID_HOME (adjust path to your SDK location)
-ANDROID_HOME=C:\Users\<YourUsername>\AppData\Local\Android\Sdk
-
-# Add to PATH
-%ANDROID_HOME%\platform-tools
-%ANDROID_HOME%\tools
-%ANDROID_HOME%\tools\bin
-```
-
-To set in PowerShell (run as Administrator):
-
-```powershell
-[System.Environment]::SetEnvironmentVariable("ANDROID_HOME", "C:\Users\<YourUsername>\AppData\Local\Android\Sdk", "User")
-[System.Environment]::SetEnvironmentVariable("Path", $env:Path + ";%ANDROID_HOME%\platform-tools;%ANDROID_HOME%\tools;%ANDROID_HOME%\tools\bin", "User")
-```
-
-### 4. Gradle
-
-- Usually comes with Android projects via Gradle Wrapper (`gradlew`)
-- **To install Gradle CLI separately** (if you want to use `gradle` command):
-
-#### Option A: Using Gradle Wrapper (Recommended for Android Projects)
-
-Android projects include a Gradle Wrapper (`gradlew` or `gradlew.bat`). Use this instead:
-
-```powershell
-.\gradlew build
-.\gradlew clean
-```
-
-#### Option B: Install Gradle CLI Manually
-
-1. Download Gradle from: [gradle.org/releases](https://gradle.org/releases/)
-2. Extract to a folder (e.g., `C:\Gradle`)
-3. Add to PATH:
-   ```powershell
-   # Run PowerShell as Administrator
-   [System.Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\Gradle\gradle-8.x\bin", "User")
-   ```
-4. Set GRADLE_HOME:
-   ```powershell
-   [System.Environment]::SetEnvironmentVariable("GRADLE_HOME", "C:\Gradle\gradle-8.x", "User")
-   ```
-5. Restart VS Code/PowerShell and verify:
-   ```powershell
-   gradle -v
-   ```
-
-#### Option C: Using Package Manager (Chocolatey)
-
-```powershell
-# Install Chocolatey first (if not installed)
-# Then run:
-choco install gradle
-```
-
-## VS Code Setup
-
-### Step 1: Install Recommended Extensions
-
-When you open this workspace, VS Code will prompt you to install recommended extensions. Click "Install All" or install them manually:
-
-1. **Extension Pack for Java** - Java language support
-2. **Kotlin** - Kotlin language support
-3. **Gradle for Java** - Gradle build tool support
-4. **XML** - XML support (for AndroidManifest.xml, layouts)
-5. **SonarLint** - Code quality checks
-
-### Step 2: Configure Android SDK Path
-
-Update `.vscode/settings.json` with your Android SDK path:
-
-```json
-"android.sdk.path": "C:\\Users\\<YourUsername>\\AppData\\Local\\Android\\Sdk"
-```
-
-Or ensure `ANDROID_HOME` environment variable is set correctly.
-
-### Step 3: Verify Setup
-
-1. Open VS Code in this workspace
-2. Open a terminal (Ctrl + `)
-3. Check Android SDK:
-   ```powershell
-   adb version
-   ```
-4. Check Java:
-   ```powershell
-   java -version
-   ```
-
-## Creating a New Android Project
-
-### Option 1: Using Android Studio
-
-1. Create a new project in Android Studio
-2. Copy the project files to this workspace
-3. Open this workspace in VS Code
-
-### Option 2: Using Command Line
-
-```powershell
-# Install Android project template (if you have Android SDK tools)
-# Or use Android Studio to create project, then open in VS Code
-```
-
-### Option 3: Using Gradle Init
-
-```powershell
-gradle init --type java-application
-# Then modify for Android structure
-```
-
-## Building and Running
-
-### Using VS Code Tasks
-
-Press `Ctrl+Shift+P` and type "Tasks: Run Task" to see available tasks:
-
-- **Gradle: Build** - Build the project
-- **Gradle: Clean** - Clean build artifacts
-- **Gradle: Assemble Debug** - Build debug APK
-- **Gradle: Assemble Release** - Build release APK
-- **Gradle: Install Debug** - Install debug APK on connected device
-- **Gradle: Run Tests** - Run unit tests
-
-### Using Terminal
-
-```powershell
-# Build
-.\gradlew build
-
-# Clean
-.\gradlew clean
-
-# Build debug APK
-.\gradlew assembleDebug
-
-# Install on device
-.\gradlew installDebug
-
-# Run tests
-.\gradlew test
-```
-
-## Debugging
-
-1. Set breakpoints in your Java/Kotlin code
-2. Run your app on an emulator or connected device
-3. Attach debugger using the "Debug Android App" configuration in launch.json
-4. Or use the Java debugger extension
-
-## Project Structure
-
-A typical Android project structure:
+### Project Structure
 
 ```
-app/
-├── src/
-│   ├── main/
-│   │   ├── java/          # Java/Kotlin source files
-│   │   ├── res/           # Resources (layouts, drawables, values)
-│   │   └── AndroidManifest.xml
-│   └── test/              # Unit tests
-├── build.gradle           # App-level build config
-└── build/
-build.gradle               # Project-level build config
-settings.gradle            # Project settings
+app/src/main/
+├── java/org/example/
+│   ├── MainActivity.java (entry point)
+│   ├── game/
+│   │   ├── GameEngine.java (main game loop)
+│   │   ├── GameState.java (enum for game states)
+│   │   ├── GameView.java (custom View with Canvas)
+│   │   ├── GameManager.java (coordinates game logic)
+│   │   └── Camera.java (camera system for scrolling in all directions)
+│   ├── entities/
+│   │   ├── Player.java (free kid character)
+│   │   ├── Teacher.java (enemy/guard)
+│   │   ├── Friend.java (rescue target)
+│   │   └── Entity.java (base class)
+│   ├── physics/
+│   │   ├── CollisionDetector.java
+│   │   ├── MovementController.java
+│   │   └── Camera.java (viewport/camera system for scrolling) (4-directional movement)
+│   ├── game/
+│   │   └── Camera.java (viewport scrolling system)
+│   ├── questions/
+│   │   ├── Question.java (data model)
+│   │   ├── QuestionDatabase.java (question storage)
+│   │   └── QuestionManager.java (question selection logic)
+│   ├── levels/
+│   │   ├── Level.java (level data model)
+│   │   ├── LevelManager.java (level progression)
+│   │   └── LevelData.java (level definitions)
+│   ├── ui/
+│   │   ├── IntroActivity.java
+│   │   ├── HelpActivity.java
+│   │   ├── SettingsActivity.java
+│   │   ├── GameOverActivity.java
+│   │   └── QuestionDialog.java
+│   └── data/
+│       ├── ScoreManager.java (score persistence)
+│       └── PreferencesManager.java (settings storage)
+└── res/
+    ├── layout/ (UI layouts)
+    ├── drawable/ (game sprites/assets)
+    ├── values/
+    │   ├── strings.xml (all text resources)
+    │   ├── colors.xml
+    │   └── questions.xml (question data)
 ```
 
-## Troubleshooting
+## Implementation Steps
 
-### Java Language Server Issues
+### Phase 1: Foundation & Core Game Engine
 
-- Reload VS Code window: `Ctrl+Shift+P` → "Developer: Reload Window"
-- Clean Java workspace: `Ctrl+Shift+P` → "Java: Clean Java Language Server Workspace"
+1. **Setup Game Infrastructure**
 
-### Gradle Sync Issues
+   - Create `GameView.java` extending View with Canvas rendering
+   - Implement `GameEngine.java` with game loop (update/render cycle)
+   - Add `GameState.java` enum (MENU, PLAYING, PAUSED, QUESTION, GAME_OVER)
+   - Create `GameManager.java` to coordinate game flow
 
-- Check `local.properties` file exists with `sdk.dir` path
-- Verify Android SDK path in settings.json
-- Run `.\gradlew --refresh-dependencies`
+2. **Entity System**
 
-### Build Errors
+   - Create base `Entity.java` class with position, size, velocity
+   - Implement `Player.java` with touch controls for movement
+   - Create `Teacher.java` with AI movement patterns (patrol/chase)
+   - Implement `Friend.java` as static rescue targets
+   - Add sprite rendering for all entities
 
-- Ensure JDK is properly installed and JAVA_HOME is set
-- Check Android SDK components are installed (SDK Platform, Build Tools)
-- Verify Gradle wrapper version compatibility
+3. **Physics & Collision**
 
-## Additional Resources
+   - Implement `CollisionDetector.java` for rectangle-based collision
+   - Add collision handling: player-teacher (caught), player-friend (rescue)
+   - Create `MovementController.java` for smooth character movement in 4 directions (up, down, left, right)
+   - Implement camera/viewport system for scrolling in all directions
+   - Add tile-based or free movement system (no gravity, top-down perspective)
 
-- [Android Developer Documentation](https://developer.android.com/)
-- [Kotlin Documentation](https://kotlinlang.org/docs/home.html)
-- [Gradle User Guide](https://docs.gradle.org/)
-- [VS Code Java Extension Guide](https://code.visualstudio.com/docs/java/java-tutorial)
+### Phase 2: Gameplay Mechanics
 
-## Notes
+4. **Level System**
 
-- This configuration is optimized for Windows
-- Adjust paths according to your system setup
-- For Flutter development, install the Flutter extension separately
+   - Create `Level.java` data model (grade level, difficulty, question pool)
+   - Implement `LevelManager.java` for progression tracking
+   - Define `LevelData.java` with level definitions:
+     - Elementary (Grades 1-5): Simple math, basic questions
+     - Middle School (Grades 6-8): Intermediate questions
+     - High School (Grades 9-12): Subject-specific questions
+     - College: Advanced questions
+     - PhD: Expert-level questions
+   - Add level selection screen
+
+5. **Question System**
+
+   - Create `Question.java` model (question text, options, correct answer, difficulty)
+   - Implement `QuestionDatabase.java` with initial question sets
+   - Create `QuestionManager.java` to select questions based on level
+   - Build `QuestionDialog.java` for question display
+   - Add question result handling (correct = continue, incorrect = game over)
+
+6. **Rescue Mechanics**
+
+   - Implement friend rescue logic (touch friend = rescue)
+   - Add score calculation based on friends rescued
+   - Track rescued friends count
+   - Add win condition (rescue all friends in level)
+
+### Phase 3: UI & Navigation
+
+7. **Main Menu & Navigation**
+
+   - Update `MainActivity.java` as main menu hub
+   - Add navigation to: Intro, Help, Settings, Play Game
+   - Create `IntroActivity.java` with game story/introduction
+   - Implement `HelpActivity.java` with game instructions
+   - Add back navigation handling
+
+8. **Settings System**
+
+   - Create `SettingsActivity.java` with preferences UI
+   - Implement `PreferencesManager.java` for settings storage
+   - Add sound toggle (background music, SFX)
+   - Add difficulty preference (if applicable)
+   - Persist settings using SharedPreferences
+
+9. **Game Over & Score Display**
+
+   - Create `GameOverActivity.java` showing final score
+   - Display rescued friends count
+   - Show level reached
+   - Add "Play Again" and "Main Menu" buttons
+
+### Phase 4: Data Persistence & Progression
+
+10. **Score Management**
+
+    - Implement `ScoreManager.java` for score persistence
+    - Store high scores per level
+    - Track total score across sessions
+    - Display score during gameplay (HUD overlay)
+    - Add score calculation: base points + time bonus + difficulty multiplier
+
+11. **Level Progression**
+
+    - Save current level/unlocked levels
+    - Track highest grade reached (elementary → PhD)
+    - Add level unlock logic (complete level N to unlock N+1)
+    - Store progression in SharedPreferences
+
+### Phase 5: Polish & Assets
+
+12. **Visual Assets**
+
+    - Create simple sprite graphics for player, teachers, friends
+    - Design school background tiles
+    - Add simple animations (walking, idle)
+    - Create UI button graphics
+    - Add game icons and launcher icon
+
+13. **Audio (Optional)**
+
+    - Add background music
+    - Add sound effects (rescue, caught, correct answer, wrong answer)
+    - Implement audio manager with settings integration
+
+14. **Testing & Refinement**
+
+    - Test collision detection accuracy
+    - Balance teacher AI difficulty
+    - Verify question difficulty scaling
+    - Test score persistence across app restarts
+    - Optimize performance (frame rate, memory)
+
+## Technical Details
+
+### Dependencies
+
+- Current: androidx.appcompat, material, constraintlayout
+- Add: None required for basic version (using native Canvas)
+
+### Key Files to Create/Modify
+
+- [`app/src/main/java/org/example/MainActivity.java`](app/src/main/java/org/example/MainActivity.java) - Update to main menu
+- [`app/src/main/java/org/example/game/GameView.java`](app/src/main/java/org/example/game/GameView.java) - New game rendering view
+- [`app/src/main/java/org/example/game/GameEngine.java`](app/src/main/java/org/example/game/GameEngine.java) - New game loop
+- [`app/src/main/java/org/example/entities/Player.java`](app/src/main/java/org/example/entities/Player.java) - New player entity
+- [`app/src/main/java/org/example/questions/QuestionDatabase.java`](app/src/main/java/org/example/questions/QuestionDatabase.java) - New question storage
+- [`app/src/main/java/org/example/data/ScoreManager.java`](app/src/main/java/org/example/data/ScoreManager.java) - New score persistence
+- [`app/src/main/res/values/strings.xml`](app/src/main/res/values/strings.xml) - Add all game strings
+- [`app/src/main/res/values/questions.xml`](app/src/main/res/values/questions.xml) - New question data file
+
+### Game Loop Structure
+
+```java
+// Pseudocode
+while (gameRunning) {
+    update(deltaTime);  // Update entities, check collisions
+    render(canvas);     // Draw all game elements
+}
+```
+
+### Data Models
+
+- **Question**: questionText, options[], correctAnswerIndex, difficulty, subject
+- **Level**: levelId, gradeLevel, maxFriends, teacherCount, questionPool
+- **Score**: currentScore, highScore, levelReached, friendsRescued
+
+## Future Enhancements (Post-Basic Version)
+
+- Paid features: Custom school builder, photo uploads for friends/teachers
+- More question categories and difficulty levels
+- Power-ups and special abilities
+- Multiplayer mode
+- Achievement system
