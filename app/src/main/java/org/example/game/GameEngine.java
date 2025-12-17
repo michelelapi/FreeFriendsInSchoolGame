@@ -1,5 +1,6 @@
 package org.example.game;
 
+import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -35,6 +36,9 @@ public class GameEngine {
     private static final float SQUARE_SIZE = 20f; // Size of each square in the pattern
     private Teacher teacherThatCaughtPlayer = null; // Track which teacher caught the player
 
+    // Sprite management
+    private SpriteManager spriteManager;
+
     // Bonus system
     private List<Bonus> availableBonuses;
     private List<Bonus> collectedBonuses; // Bonuses collected by player
@@ -44,19 +48,26 @@ public class GameEngine {
     private float bonusMessageTimer = 0f;
     private static final float BONUS_MESSAGE_DURATION = 2f; // Show message for 2 seconds
     private boolean principalBonusActive = false; // Track if principal bonus is active
+    private float principalBonusTimer = 0f; // Timer for principal bonus timeout
+    private static final float PRINCIPAL_BONUS_TIMEOUT = 15f; // Principal bonus lasts max 15 seconds
 
     // Bonus UI
     private static final float BONUS_ICON_SIZE = 60f;
     private static final float BONUS_ICON_SPACING = 70f;
     private static final float BONUS_ICON_MARGIN = 20f;
 
-    public GameEngine(float viewportWidth, float viewportHeight) {
+    public GameEngine(float viewportWidth, float viewportHeight, Context context) {
         this.state = GameState.PLAYING;
         this.camera = new Camera(viewportWidth, viewportHeight, worldWidth, worldHeight);
         this.teachers = new ArrayList<>();
         this.friends = new ArrayList<>();
         this.lastUpdateTime = System.currentTimeMillis();
         this.random = new Random();
+
+        // Initialize sprite manager
+        if (context != null) {
+            this.spriteManager = SpriteManager.getInstance(context);
+        }
 
         // Initialize bonus system
         this.availableBonuses = new ArrayList<>();
@@ -82,14 +93,18 @@ public class GameEngine {
         this.roomPaint.setStyle(Paint.Style.FILL);
 
         // Create school layout
-        this.schoolLayout = new SchoolLayout(worldWidth, worldHeight);
+        this.schoolLayout = new SchoolLayout(worldWidth, worldHeight, spriteManager);
 
         initializeLevel();
+    }
+    
+    public SpriteManager getSpriteManager() {
+        return spriteManager;
     }
 
     private void initializeLevel() {
         // Initialize player at starting position (in a corridor)
-        player = new Player(150, 150);
+        player = new Player(150, 150, spriteManager);
 
         // Add friends in rooms first
         List<SchoolLayout.Room> rooms = schoolLayout.getRooms();
@@ -98,7 +113,7 @@ public class GameEngine {
             // Place friend in center of room
             float friendX = room.getX() + room.getWidth() / 2 - 15;
             float friendY = room.getY() + room.getHeight() / 2 - 15;
-            friends.add(new Friend(friendX, friendY));
+            friends.add(new Friend(friendX, friendY, spriteManager));
         }
 
         // Add teachers and assign them to guard friends
@@ -230,7 +245,7 @@ public class GameEngine {
                 }
             }
 
-            Teacher teacher = new Teacher(teacherX, teacherY);
+            Teacher teacher = new Teacher(teacherX, teacherY, spriteManager);
             teacher.setGuardedFriend(friend);
             teachers.add(teacher);
         }
@@ -267,20 +282,36 @@ public class GameEngine {
 
         // Update teachers
         for (Teacher teacher : teachers) {
+            // Store previous position for collision recovery
+            float prevX = teacher.getX();
+            float prevY = teacher.getY();
+            
             // Update teacher with player and friends information for guard/chase behavior
             teacher.update(deltaTime, schoolLayout, player, friends);
 
-            // Check boundary walls
+            // Check boundary walls first
             boolean hitBoundary = CollisionDetector.checkWallCollision(teacher, worldWidth, worldHeight);
             if (hitBoundary) {
                 CollisionDetector.resolveWallCollision(teacher, worldWidth, worldHeight);
                 teacher.onWallCollision();
             }
-            // Check brick wall collisions
+            
+            // Check brick wall collisions - resolve multiple times if needed
             boolean hitWall = CollisionDetector.checkWallCollision(teacher, schoolLayout.getWalls());
             if (hitWall) {
-                CollisionDetector.resolveWallCollision(teacher, schoolLayout.getWalls());
-                teacher.onWallCollision();
+                // Try to resolve collision up to 3 times
+                for (int resolveAttempt = 0; resolveAttempt < 3; resolveAttempt++) {
+                    CollisionDetector.resolveWallCollision(teacher, schoolLayout.getWalls());
+                    hitWall = CollisionDetector.checkWallCollision(teacher, schoolLayout.getWalls());
+                    if (!hitWall) {
+                        break; // Successfully resolved
+                    }
+                }
+                
+                // If still colliding after multiple attempts, notify teacher
+                if (hitWall) {
+                    teacher.onWallCollision();
+                }
             }
         }
 
@@ -319,8 +350,10 @@ public class GameEngine {
             }
         }
 
-        // Check if principal bonus is active and all non-ignored teachers have arrived
+        // Check if principal bonus is active and all non-ignored teachers have arrived, or timeout
         if (principalBonusActive) {
+            principalBonusTimer += deltaTime;
+            
             boolean allTeachersArrived = true;
             for (Teacher teacher : teachers) {
                 // Only check teachers that are going to office, haven't reached it, and aren't
@@ -333,14 +366,16 @@ public class GameEngine {
                 }
             }
 
-            if (allTeachersArrived) {
-                // All non-ignored teachers have arrived, signal them to return
+            // End bonus if all teachers arrived OR timeout expired
+            if (allTeachersArrived || principalBonusTimer >= PRINCIPAL_BONUS_TIMEOUT) {
+                // Signal ALL teachers to return (including stuck ones)
                 for (Teacher teacher : teachers) {
                     if (teacher.isGoingToPrincipalOffice()) {
                         teacher.returnFromPrincipalOffice();
                     }
                 }
                 principalBonusActive = false;
+                principalBonusTimer = 0f;
             }
         }
 
@@ -421,7 +456,12 @@ public class GameEngine {
         // First, draw all corridor squares (light gray) for the entire visible area
         for (float y = alignedStartY; y < endY; y += SQUARE_SIZE) {
             for (float x = alignedStartX; x < endX; x += SQUARE_SIZE) {
-                canvas.drawRect(x, y, x + SQUARE_SIZE, y + SQUARE_SIZE, corridorPaint);
+                // Try to use tile sprite if available
+                if (spriteManager != null && spriteManager.getCorridorTileSprite() != null) {
+                    spriteManager.drawSprite(canvas, spriteManager.getCorridorTileSprite(), x, y, SQUARE_SIZE, SQUARE_SIZE);
+                } else {
+                    canvas.drawRect(x, y, x + SQUARE_SIZE, y + SQUARE_SIZE, corridorPaint);
+                }
             }
         }
 
@@ -456,7 +496,12 @@ public class GameEngine {
                     float squareCenterX = x + SQUARE_SIZE / 2;
                     float squareCenterY = y + SQUARE_SIZE / 2;
                     if (room.contains(squareCenterX, squareCenterY)) {
-                        canvas.drawRect(x, y, x + SQUARE_SIZE, y + SQUARE_SIZE, roomPaint);
+                        // Try to use tile sprite if available
+                        if (spriteManager != null && spriteManager.getRoomTileSprite() != null) {
+                            spriteManager.drawSprite(canvas, spriteManager.getRoomTileSprite(), x, y, SQUARE_SIZE, SQUARE_SIZE);
+                        } else {
+                            canvas.drawRect(x, y, x + SQUARE_SIZE, y + SQUARE_SIZE, roomPaint);
+                        }
                     }
                 }
             }
@@ -740,5 +785,9 @@ public class GameEngine {
      */
     public void setPrincipalBonusActive(boolean active) {
         this.principalBonusActive = active;
+        if (active) {
+            // Reset timer when bonus is activated
+            this.principalBonusTimer = 0f;
+        }
     }
 }

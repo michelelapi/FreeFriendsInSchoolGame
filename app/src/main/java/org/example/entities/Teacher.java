@@ -6,6 +6,7 @@ import android.graphics.Paint;
 
 import org.example.game.DeadEndFillingPathfinder;
 import org.example.game.SchoolLayout;
+import org.example.game.SpriteManager;
 import org.example.game.WallAwarenessSystem;
 
 import java.util.List;
@@ -19,6 +20,7 @@ public class Teacher extends Entity {
 
     private Paint paint;
     private Random random;
+    private SpriteManager spriteManager;
     private float directionChangeTimer = 0f;
     private float directionChangeInterval = 2f; // Change direction every 2 seconds
     private float currentDirection = 0f; // Angle in radians
@@ -30,9 +32,9 @@ public class Teacher extends Entity {
     // Stuck to wall detection and recovery
     private boolean isUnstucking = false; // Flag to indicate we're in random movement mode
     private float unstuckTimer = 0f; // Timer for random movement duration
-    private static final float UNSTUCK_DURATION = 2f; // Try random movement for 2 seconds
+    private static final float UNSTUCK_DURATION = 1.5f; // Try random movement for 1.5 seconds (reduced for faster recovery)
     private int wallCollisionCounter = 0; // Counter for consecutive wall collisions
-    private static final int WALL_COLLISION_THRESHOLD = 3; // Enter unstuck mode after 3 consecutive collisions
+    private static final int WALL_COLLISION_THRESHOLD = 2; // Enter unstuck mode after 2 consecutive collisions (reduced for faster recovery)
     private float lastSuccessfulMoveX = 0f; // Last position where we successfully moved
     private float lastSuccessfulMoveY = 0f;
     private float unstuckDirectionChangeTimer = 0f; // Timer for changing direction during unstuck
@@ -78,11 +80,12 @@ public class Teacher extends Entity {
 
     // Wall Awareness System (shared across all teachers)
     private static WallAwarenessSystem wallAwareness = null;
-    private static final float WALL_CHECK_DISTANCE = 80f; // Distance to check for walls ahead
+    private static final float WALL_CHECK_DISTANCE = 100f; // Distance to check for walls ahead (increased to detect walls earlier)
 
-    public Teacher(float x, float y) {
+    public Teacher(float x, float y, SpriteManager spriteManager) {
         super(x, y, 40, 40);
         this.speed = DEFAULT_SPEED;
+        this.spriteManager = spriteManager;
         this.random = new Random();
         this.currentDirection = (float) (random.nextDouble() * Math.PI * 2); // Random initial direction
         this.lastX = x;
@@ -92,6 +95,12 @@ public class Teacher extends Entity {
         this.paint = new Paint();
         this.paint.setColor(Color.RED);
         this.paint.setStyle(Paint.Style.FILL);
+        
+        // Update size if sprite is available
+        if (spriteManager != null) {
+            this.width = spriteManager.getTeacherWidth();
+            this.height = spriteManager.getTeacherHeight();
+        }
     }
 
     public void setGuardedFriend(Friend friend) {
@@ -790,7 +799,13 @@ public class Teacher extends Entity {
     @Override
     public void draw(Canvas canvas, float cameraX, float cameraY) {
         // Draw at world coordinates - camera transform is already applied to canvas
-        canvas.drawRect(x, y, x + width, y + height, paint);
+        if (spriteManager != null && spriteManager.getTeacherSprite() != null) {
+            // Draw sprite if available
+            spriteManager.drawSprite(canvas, spriteManager.getTeacherSprite(), x, y, width, height);
+        } else {
+            // Fallback to colored rectangle
+            canvas.drawRect(x, y, x + width, y + height, paint);
+        }
     }
 
     public boolean isChasing() {
@@ -834,13 +849,30 @@ public class Teacher extends Entity {
 
     /**
      * Signals the teacher to return from principal's office
+     * This is called when the bonus ends (either all teachers arrived or timeout)
      */
     public void returnFromPrincipalOffice() {
-        if (isGoingToPrincipalOffice && hasReachedPrincipalOffice) {
+        if (isGoingToPrincipalOffice) {
+            // Reset all principal office related flags
             returningToGuard = true;
             awayTimer = 0f;
             isGoingToPrincipalOffice = false;
             hasReachedPrincipalOffice = false;
+            isIgnoredForPrincipalBonus = false; // Reset ignored flag so teacher can move again
+            principalOfficeStartTime = 0f;
+            lastPrincipalOfficeProgressTime = 0f;
+            lastPrincipalOfficeDistance = Float.MAX_VALUE;
+            lastDistanceToTarget = Float.MAX_VALUE;
+            stuckAtTargetCounter = 0;
+            
+            // Reset away state if we're stuck going to office
+            if (isAway && !hasReachedPrincipalOffice) {
+                // We were going to office but didn't make it, reset to normal behavior
+                isAway = false;
+                returningToGuard = false;
+                awayTimer = 0f;
+                awayDuration = 0f;
+            }
         }
     }
 

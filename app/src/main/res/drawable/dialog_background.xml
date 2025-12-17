@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Layer 1: Center (stretched) - fills entire area -->
+    <item        
+        android:left="15dp"
+        android:right="15dp"
+        android:top="30dp"
+        android:bottom="14dp">
+        <bitmap
+            android:src="@drawable/dialog_box_center"
+            android:tileMode="disabled"
+            android:gravity="fill" />
+    </item>
+    
+    <!-- Layer 2: Top edge (stretched horizontally, inset from corners) -->
+    <item
+        android:left="30dp"
+        android:right="30dp"
+        android:top="0dp">
+        <bitmap
+            android:src="@drawable/dialog_box_corner_middle_top"
+            android:tileMode="disabled"
+            android:gravity="top|fill_horizontal" />
+    </item>
+    
+    <!-- Layer 3: Bottom edge (stretched horizontally, inset from corners) -->
+    <item
+        android:left="30dp"
+        android:right="30dp"
+        android:bottom="0dp">
+        <bitmap
+            android:src="@drawable/dialog_box_corner_middle_bottom"
+            android:tileMode="disabled"
+            android:gravity="bottom|fill_horizontal" />
+    </item>
+    
+    <!-- Layer 4: Left edge (stretched vertically, inset from corners) -->
+    <item
+        android:left="0dp"
+        android:top="30dp"
+        android:bottom="30dp">
+        <bitmap
+            android:src="@drawable/dialog_box_corner_middle_sx"
+            android:tileMode="disabled"
+            android:gravity="left|fill_vertical" />
+    </item>
+    
+    <!-- Layer 5: Right edge (stretched vertically, inset from corners) -->
+    <item
+        android:right="0dp"
+        android:top="30dp"
+        android:bottom="30dp">
+        <bitmap
+            android:src="@drawable/dialog_box_corner_middle_dx"
+            android:tileMode="disabled"
+            android:gravity="right|fill_vertical" />
+    </item>
+    
+    <!-- Layer 6: Top-left corner -->
+    <item
+        android:left="0dp"
+        android:top="0dp">
+        <bitmap
+            android:src="@drawable/dialog_box_corner_sx_top"
+            android:tileMode="disabled"
+            android:gravity="top|left" />
+    </item>
+
+    <!-- Layer 7: Top-right corner -->
+    <item
+        android:right="0dp"
+        android:top="0dp">
+        <bitmap
+            android:src="@drawable/dialog_box_corner_rx_top"
+            android:tileMode="disabled"
+            android:gravity="top|right" />
+    </item>
+
+    <!-- Layer 8: Bottom-left corner -->
+    <item
+        android:left="0dp"
+        android:bottom="0dp">
+        <bitmap
+            android:src="@drawable/dialog_box_corner_sx_bottom"
+            android:tileMode="disabled"
+            android:gravity="bottom|left" />
+    </item>
+
+    <!-- Layer 9: Bottom-right corner -->
+    <item
+        android:right="0dp"
+        android:bottom="0dp">
+        <bitmap
+            android:src="@drawable/dialog_box_corner_rx_bottom"
+            android:tileMode="disabled"
+            android:gravity="bottom|right" />
+    </item>
+</layer-list>

@@ -41,7 +41,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                 width = 1080;
                 height = 1920;
             }
-            gameEngine = new GameEngine(width, height);
+            gameEngine = new GameEngine(width, height, getContext());
         }
         if (gameThread == null) {
             gameThread = new GameThread(getHolder(), this);

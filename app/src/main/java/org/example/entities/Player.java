@@ -4,6 +4,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 
+import org.example.game.SpriteManager;
+
 public class Player extends Entity {
     private static final float DEFAULT_SPEED = 200f; // pixels per second
     private boolean movingUp = false;
@@ -11,13 +13,21 @@ public class Player extends Entity {
     private boolean movingLeft = false;
     private boolean movingRight = false;
     private Paint paint;
+    private SpriteManager spriteManager;
 
-    public Player(float x, float y) {
+    public Player(float x, float y, SpriteManager spriteManager) {
         super(x, y, 40, 40);
         this.speed = DEFAULT_SPEED;
+        this.spriteManager = spriteManager;
         this.paint = new Paint();
         this.paint.setColor(Color.BLUE);
         this.paint.setStyle(Paint.Style.FILL);
+        
+        // Update size if sprite is available
+        if (spriteManager != null) {
+            this.width = spriteManager.getPlayerWidth();
+            this.height = spriteManager.getPlayerHeight();
+        }
     }
 
     @Override
@@ -48,7 +58,13 @@ public class Player extends Entity {
     @Override
     public void draw(Canvas canvas, float cameraX, float cameraY) {
         // Draw at world coordinates - camera transform is already applied to canvas
-        canvas.drawRect(x, y, x + width, y + height, paint);
+        if (spriteManager != null && spriteManager.getPlayerSprite() != null) {
+            // Draw sprite if available
+            spriteManager.drawSprite(canvas, spriteManager.getPlayerSprite(), x, y, width, height);
+        } else {
+            // Fallback to colored rectangle
+            canvas.drawRect(x, y, x + width, y + height, paint);
+        }
     }
 
     public void setMovingUp(boolean moving) {

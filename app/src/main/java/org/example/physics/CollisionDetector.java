@@ -73,36 +73,83 @@ public class CollisionDetector {
     public static void resolveWallCollision(Entity entity, List<Wall> walls) {
         float prevX = entity.getX();
         float prevY = entity.getY();
+        float margin = 3f; // Margin to push entity away from wall to prevent getting stuck
         
-        // Try to resolve collision by moving back
-        for (Wall wall : walls) {
-            if (entity.getBounds().intersect(wall.getBounds())) {
-                // Calculate overlap
-                float overlapLeft = (entity.getX() + entity.getWidth()) - wall.getX();
-                float overlapRight = (wall.getX() + wall.getWidth()) - entity.getX();
-                float overlapTop = (entity.getY() + entity.getHeight()) - wall.getY();
-                float overlapBottom = (wall.getY() + wall.getHeight()) - entity.getY();
-                
-                // Find minimum overlap
-                float minOverlap = Math.min(Math.min(overlapLeft, overlapRight), 
-                                           Math.min(overlapTop, overlapBottom));
-                
-                // Resolve collision based on minimum overlap direction
-                if (minOverlap == overlapLeft) {
-                    entity.setPosition(wall.getX() - entity.getWidth(), entity.getY());
-                } else if (minOverlap == overlapRight) {
-                    entity.setPosition(wall.getX() + wall.getWidth(), entity.getY());
-                } else if (minOverlap == overlapTop) {
-                    entity.setPosition(entity.getX(), wall.getY() - entity.getHeight());
-                } else if (minOverlap == overlapBottom) {
-                    entity.setPosition(entity.getX(), wall.getY() + wall.getHeight());
-                }
-                
-                // If still colliding, try the previous position
+        // Try to resolve collision by moving back - iterate multiple times to handle multiple walls
+        for (int attempt = 0; attempt < 5; attempt++) {
+            boolean stillColliding = false;
+            
+            for (Wall wall : walls) {
                 if (entity.getBounds().intersect(wall.getBounds())) {
-                    entity.setPosition(prevX, prevY);
+                    stillColliding = true;
+                    
+                    // Calculate center points
+                    float entityCenterX = entity.getX() + entity.getWidth() / 2;
+                    float entityCenterY = entity.getY() + entity.getHeight() / 2;
+                    float wallCenterX = wall.getX() + wall.getWidth() / 2;
+                    float wallCenterY = wall.getY() + wall.getHeight() / 2;
+                    
+                    // Calculate overlaps
+                    float overlapLeft = (entity.getX() + entity.getWidth()) - wall.getX();
+                    float overlapRight = (wall.getX() + wall.getWidth()) - entity.getX();
+                    float overlapTop = (entity.getY() + entity.getHeight()) - wall.getY();
+                    float overlapBottom = (wall.getY() + wall.getHeight()) - entity.getY();
+                    
+                    // Find minimum overlap
+                    float minOverlap = Math.min(Math.min(overlapLeft, overlapRight), 
+                                               Math.min(overlapTop, overlapBottom));
+                    
+                    // Resolve collision based on minimum overlap direction with margin
+                    if (minOverlap == overlapLeft && overlapLeft < overlapRight) {
+                        entity.setPosition(wall.getX() - entity.getWidth() - margin, entity.getY());
+                    } else if (minOverlap == overlapRight && overlapRight < overlapLeft) {
+                        entity.setPosition(wall.getX() + wall.getWidth() + margin, entity.getY());
+                    } else if (minOverlap == overlapTop && overlapTop < overlapBottom) {
+                        entity.setPosition(entity.getX(), wall.getY() - entity.getHeight() - margin);
+                    } else if (minOverlap == overlapBottom && overlapBottom < overlapTop) {
+                        entity.setPosition(entity.getX(), wall.getY() + wall.getHeight() + margin);
+                    } else {
+                        // If overlaps are similar, push based on center distance
+                        float dx = entityCenterX - wallCenterX;
+                        float dy = entityCenterY - wallCenterY;
+                        
+                        if (Math.abs(dx) > Math.abs(dy)) {
+                            // Push horizontally
+                            if (dx > 0) {
+                                entity.setPosition(wall.getX() + wall.getWidth() + margin, entity.getY());
+                            } else {
+                                entity.setPosition(wall.getX() - entity.getWidth() - margin, entity.getY());
+                            }
+                        } else {
+                            // Push vertically
+                            if (dy > 0) {
+                                entity.setPosition(entity.getX(), wall.getY() + wall.getHeight() + margin);
+                            } else {
+                                entity.setPosition(entity.getX(), wall.getY() - entity.getHeight() - margin);
+                            }
+                        }
+                    }
                 }
             }
+            
+            // If no collisions remain, we're done
+            if (!stillColliding) {
+                break;
+            }
+        }
+        
+        // If still colliding after all attempts, try reverting to previous position
+        boolean stillColliding = false;
+        for (Wall wall : walls) {
+            if (entity.getBounds().intersect(wall.getBounds())) {
+                stillColliding = true;
+                break;
+            }
+        }
+        
+        if (stillColliding) {
+            // Try moving back along velocity direction if available
+            entity.setPosition(prevX, prevY);
         }
     }
 }
