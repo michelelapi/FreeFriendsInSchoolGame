@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">School Escape</string>
+    <string name="hello_android">Hello Android! lapi</string>
+    
+    <!-- Main Menu -->
+    <string name="play_game">Play Game</string>
+    <string name="intro">Introduction</string>
+    <string name="help">Help</string>
+    <string name="settings">Settings</string>
+    
+    <!-- Intro -->
+    <string name="intro_story">Welcome to School Escape!\n\nYou are a free kid in a school, and your mission is to rescue your friends who are being guarded by bad teachers.\n\nTouch your friends to free them, but be careful! If a teacher catches you, you must answer their question correctly to continue. Answer wrong, and the game ends.\n\nProgress through different school levels from elementary to PhD, with questions matching your grade level.\n\nGood luck!</string>
+    
+    <!-- Help -->
+    <string name="help_instructions">How to Play:\n\n1. Move your character by touching the screen. Touch the center area to move in that direction.\n\n2. Find and touch your friends (green squares) to rescue them.\n\n3. Avoid the teachers (red squares) who patrol the school.\n\n4. If caught by a teacher, answer their question correctly to continue.\n\n5. Rescue all friends in a level to win!\n\n6. Progress through levels from elementary school to PhD.\n\n7. Your score increases with each friend rescued.\n\nGood luck!</string>
+    
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="sound_enabled">Sound Effects</string>
+    <string name="music_enabled">Background Music</string>
+    
+    <!-- Game Over -->
+    <string name="game_over">Game Over</string>
+    <string name="final_score_label">Final Score: %d</string>
+    <string name="friends_rescued_label">Friends Rescued: %1$d/%2$d</string>
+    <string name="high_score_label">High Score: %d</string>
+    <string name="play_again">Play Again</string>
+    <string name="main_menu">Main Menu</string>
+</resources>
