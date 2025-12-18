@@ -19,36 +19,52 @@
     <Button
         android:id="@+id/play_button"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
         android:text="@string/play_game"
         android:textSize="18sp"
         android:minWidth="200dp"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/button_background_blue"
+        android:backgroundTint="@null"
+        android:paddingTop="0dp"
+        android:paddingBottom="0dp" />
 
     <Button
         android:id="@+id/intro_button"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
         android:text="@string/intro"
         android:textSize="18sp"
         android:minWidth="200dp"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/button_background_blue"
+        android:backgroundTint="@null"
+        android:paddingTop="0dp"
+        android:paddingBottom="0dp" />
 
     <Button
         android:id="@+id/help_button"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
         android:text="@string/help"
         android:textSize="18sp"
         android:minWidth="200dp"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/button_background_blue"
+        android:backgroundTint="@null"
+        android:paddingTop="0dp"
+        android:paddingBottom="0dp" />
 
     <Button
         android:id="@+id/settings_button"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
         android:text="@string/settings"
         android:textSize="18sp"
-        android:minWidth="200dp" />
+        android:minWidth="200dp"
+        android:background="@drawable/button_background_blue"
+        android:backgroundTint="@null"
+        android:paddingTop="0dp"
+        android:paddingBottom="0dp" />
 
 </LinearLayout>

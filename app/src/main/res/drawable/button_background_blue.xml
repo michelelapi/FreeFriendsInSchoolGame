@@ -1,5 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
-<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
-    android:src="@drawable/led_square_blue"
-    android:tileMode="disabled"
-    android:gravity="fill" />
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    
+    <!-- Layer 1: Middle part (stretched horizontally, fills entire area) -->
+    <item
+        android:left="24dp"
+        android:right="24dp"
+        android:top="0dp"
+        android:bottom="0dp">
+        <bitmap
+            android:src="@drawable/led_square_blue_middle"
+            android:tileMode="disabled"
+            android:gravity="center|fill_vertical|fill_horizontal" />
+    </item>
+    
+    <!-- Layer 2: Left part (sx) - stretched vertically -->
+    <item
+        android:left="0dp"
+        android:top="0dp"
+        android:bottom="0dp">
+        <bitmap
+            android:src="@drawable/led_square_blue_sx"
+            android:tileMode="disabled"
+            android:gravity="left|fill_vertical" />
+    </item>
+    
+    <!-- Layer 3: Right part (dx) - stretched vertically -->
+    <item
+        android:right="0dp"
+        android:top="0dp"
+        android:bottom="0dp">
+        <bitmap
+            android:src="@drawable/led_square_blue_dx"
+            android:tileMode="disabled"
+            android:gravity="right|fill_vertical" />
+    </item>
+    
+</layer-list>
