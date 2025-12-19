@@ -3,10 +3,12 @@ package org.example.entities;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
 
 import org.example.game.DeadEndFillingPathfinder;
 import org.example.game.SchoolLayout;
 import org.example.game.SpriteManager;
+import org.example.game.VisionCone;
 import org.example.game.WallAwarenessSystem;
 
 import java.util.List;
@@ -81,6 +83,22 @@ public class Teacher extends Entity {
     // Wall Awareness System (shared across all teachers)
     private static WallAwarenessSystem wallAwareness = null;
     private static final float WALL_CHECK_DISTANCE = 100f; // Distance to check for walls ahead (increased to detect walls earlier)
+    
+    // Vision Cone System
+    private VisionCone visionCone;
+    private static final float VISION_CONE_LENGTH = 200f; // 200 pixels as specified
+    private boolean isSearchingForOpening = false; // True when vision hits wall and we're rotating to find opening
+    private float openingSearchDirection = 0f; // Direction we found an opening toward
+    private float rotationSpeed = (float) (Math.PI * 2); // Radians per second for rotation
+    private Float targetOpeningDirection = null; // Direction to opening we're moving toward
+    
+    // Debug visualization
+    // To enable vision cone visualization, set: Teacher.SHOW_VISION_CONE = true;
+    // Or call: Teacher.setVisionConeVisualization(true);
+    // Or double-tap the screen during gameplay to toggle
+    public static boolean SHOW_VISION_CONE = true; // Toggle to show/hide vision cone (default: true for testing)
+    private Paint visionConePaint;
+    private Paint visionConeOutlinePaint;
 
     public Teacher(float x, float y, SpriteManager spriteManager) {
         super(x, y, 40, 40);
@@ -96,11 +114,24 @@ public class Teacher extends Entity {
         this.paint.setColor(Color.RED);
         this.paint.setStyle(Paint.Style.FILL);
         
+        // Initialize vision cone debug paints
+        visionConePaint = new Paint();
+        visionConePaint.setColor(Color.argb(100, 255, 255, 0)); // More visible semi-transparent yellow fill
+        visionConePaint.setStyle(Paint.Style.FILL);
+        
+        visionConeOutlinePaint = new Paint();
+        visionConeOutlinePaint.setColor(Color.argb(255, 255, 200, 0)); // Bright yellow outline
+        visionConeOutlinePaint.setStyle(Paint.Style.STROKE);
+        visionConeOutlinePaint.setStrokeWidth(3f); // Thicker outline for better visibility
+        
         // Update size if sprite is available
         if (spriteManager != null) {
             this.width = spriteManager.getTeacherWidth();
             this.height = spriteManager.getTeacherHeight();
         }
+        
+        // Vision cone will be initialized when schoolLayout is available
+        visionCone = null;
     }
 
     public void setGuardedFriend(Friend friend) {
@@ -127,6 +158,11 @@ public class Teacher extends Entity {
     public void update(float deltaTime, SchoolLayout schoolLayout, Player player, java.util.List<Friend> allFriends) {
         // Initialize pathfinder if needed (lazy initialization)
         initializePathfinder(schoolLayout, schoolLayout.getWorldWidth(), schoolLayout.getWorldHeight());
+        
+        // Initialize vision cone if needed
+        if (visionCone == null) {
+            visionCone = new VisionCone(VISION_CONE_LENGTH, schoolLayout);
+        }
 
         // Update away timer (bonus behavior)
         if (isAway) {
@@ -225,38 +261,14 @@ public class Teacher extends Entity {
                         currentDirection = perpAngle;
                         stuckAtTargetCounter = 0; // Reset counter
                     } else {
-                        // Normal movement towards target using Dead-End Filling and Wall Awareness
-                        float desiredDirection = (float) Math.atan2(dy, dx);
-
-                        // Use Dead-End Filling for initial direction
-                        if (pathfinder != null) {
-                            desiredDirection = pathfinder.getDirectionToTarget(
-                                    getCenterX(), getCenterY(), awayTargetX, awayTargetY);
-                        }
-
-                        // Use Wall Awareness to avoid walls and problematic areas
-                        if (wallAwareness != null) {
-                            currentDirection = wallAwareness.findBestDirection(
-                                    getCenterX(), getCenterY(), desiredDirection, width, height);
-                        } else {
-                            currentDirection = desiredDirection;
-                        }
+                        // Use vision-based direction toward target
+                        currentDirection = getVisionBasedDirection(awayTargetX, awayTargetY, deltaTime);
                     }
 
                     // If unstucking, use random movement
                     if (isUnstucking) {
                         moveRandomly(deltaTime);
                         return;
-                    }
-
-                    // Proactive wall checking: avoid walls before hitting them
-                    if (wallAwareness != null) {
-                        if (wallAwareness.hasWallAhead(getCenterX(), getCenterY(), currentDirection,
-                                WALL_CHECK_DISTANCE, width, height)) {
-                            // Wall detected ahead, find alternative direction
-                            currentDirection = wallAwareness.findBestDirection(
-                                    getCenterX(), getCenterY(), currentDirection, width, height);
-                        }
                     }
 
                     // Apply movement
@@ -322,22 +334,8 @@ public class Teacher extends Entity {
                         return;
                     }
 
-                    // Move back to guard position using Dead-End Filling and Wall Awareness
-                    float desiredDirection = (float) Math.atan2(dy, dx);
-
-                    // Use Dead-End Filling for initial direction
-                    if (pathfinder != null) {
-                        desiredDirection = pathfinder.getDirectionToTarget(
-                                getCenterX(), getCenterY(), returnTargetX, returnTargetY);
-                    }
-
-                    // Use Wall Awareness to avoid walls
-                    if (wallAwareness != null) {
-                        currentDirection = wallAwareness.findBestDirection(
-                                getCenterX(), getCenterY(), desiredDirection, width, height);
-                    } else {
-                        currentDirection = desiredDirection;
-                    }
+                    // Use vision-based direction toward guard position
+                    currentDirection = getVisionBasedDirection(returnTargetX, returnTargetY, deltaTime);
                     velocityX = (float) (Math.cos(currentDirection) * speed);
                     velocityY = (float) (Math.sin(currentDirection) * speed);
 
@@ -398,13 +396,16 @@ public class Teacher extends Entity {
         }
 
         // Check if player is nearby (only if not frozen)
+        // NOTE: Player detection uses circular DETECTION_RADIUS, NOT the vision cone
+        // Vision cone is only used for wall detection during navigation
         if (player != null && !isFrozen) {
             float dx = player.getCenterX() - getCenterX();
             float dy = player.getCenterY() - getCenterY();
             float distanceToPlayer = (float) Math.sqrt(dx * dx + dy * dy);
 
             if (distanceToPlayer <= DETECTION_RADIUS) {
-                // Player detected! Chase the player
+                // Player detected using circular radius! Chase the player
+                // (Vision cone will be used for wall detection during chase, not for player detection)
                 isChasing = true;
                 chasePlayer(player, deltaTime);
                 return;
@@ -446,22 +447,8 @@ public class Teacher extends Entity {
             // Add some randomness
             patrolAngle += (random.nextFloat() - 0.5f) * 0.5f;
         } else {
-            // Move towards patrol point using Dead-End Filling and Wall Awareness
-            float desiredDirection = (float) Math.atan2(dy, dx);
-
-            // Use Dead-End Filling for initial direction
-            if (pathfinder != null) {
-                desiredDirection = pathfinder.getDirectionToTarget(
-                        getCenterX(), getCenterY(), targetX, targetY);
-            }
-
-            // Use Wall Awareness to avoid walls
-            if (wallAwareness != null) {
-                currentDirection = wallAwareness.findBestDirection(
-                        getCenterX(), getCenterY(), desiredDirection, width, height);
-            } else {
-                currentDirection = desiredDirection;
-            }
+            // Use vision-based direction toward patrol point
+            currentDirection = getVisionBasedDirection(targetX, targetY, deltaTime);
 
             velocityX = (float) (Math.cos(currentDirection) * speed);
             velocityY = (float) (Math.sin(currentDirection) * speed);
@@ -487,6 +474,125 @@ public class Teacher extends Entity {
         }
     }
 
+    /**
+     * Uses vision cone for WALL DETECTION ONLY to determine movement direction toward a target.
+     * The vision cone is NOT used for player detection - player detection uses DETECTION_RADIUS.
+     * If vision hits a wall, rotates to find an opening and moves toward it.
+     * @param targetX Target X position (could be player, friend, or any target)
+     * @param targetY Target Y position
+     * @param deltaTime Time delta
+     * @return The direction to move in
+     */
+    private float getVisionBasedDirection(float targetX, float targetY, float deltaTime) {
+        if (visionCone == null) {
+            // Fallback to direct direction if vision cone not initialized
+            return (float) Math.atan2(targetY - getCenterY(), targetX - getCenterX());
+        }
+        
+        float centerX = getCenterX();
+        float centerY = getCenterY();
+        
+        // Check if vision cone hits a wall
+        boolean visionHitsWall = visionCone.hitsWall(centerX, centerY, currentDirection);
+        
+        if (visionHitsWall) {
+            // Vision hits wall - need to find an opening
+            if (!isSearchingForOpening) {
+                // Start searching for an opening
+                isSearchingForOpening = true;
+                targetOpeningDirection = null;
+            }
+            
+            // Find an opening toward the target
+            if (targetOpeningDirection == null) {
+                targetOpeningDirection = visionCone.findBestOpeningTowardTarget(
+                    centerX, centerY, targetX, targetY, currentDirection);
+            }
+            
+            if (targetOpeningDirection != null) {
+                // Rotate toward the opening
+                float angleDiff = normalizeAngle(targetOpeningDirection - currentDirection);
+                if (angleDiff > Math.PI) {
+                    angleDiff -= (float) (Math.PI * 2);
+                }
+                
+                // Rotate at rotation speed
+                float maxRotation = rotationSpeed * deltaTime;
+                if (Math.abs(angleDiff) <= maxRotation) {
+                    // Reached the opening direction
+                    currentDirection = targetOpeningDirection;
+                    isSearchingForOpening = false;
+                    targetOpeningDirection = null;
+                } else {
+                    // Rotate toward opening
+                    if (angleDiff > 0) {
+                        currentDirection += maxRotation;
+                    } else {
+                        currentDirection -= maxRotation;
+                    }
+                    currentDirection = normalizeAngle(currentDirection);
+                }
+            } else {
+                // No opening found, try rotating to find one
+                Float opening = visionCone.findOpening(centerX, centerY, currentDirection, 
+                    (float) (Math.PI * 2), (float) (Math.PI / 18));
+                if (opening != null) {
+                    targetOpeningDirection = opening;
+                } else {
+                    // No opening found, use wall awareness as fallback
+                    float desiredDirection = (float) Math.atan2(targetY - centerY, targetX - centerX);
+                    if (wallAwareness != null) {
+                        currentDirection = wallAwareness.findBestDirection(
+                            centerX, centerY, desiredDirection, width, height);
+                    } else {
+                        currentDirection = desiredDirection;
+                    }
+                    isSearchingForOpening = false;
+                    targetOpeningDirection = null;
+                }
+            }
+        } else {
+            // Vision doesn't hit wall - clear opening search state
+            if (isSearchingForOpening) {
+                // We've passed through the opening, now head toward target
+                isSearchingForOpening = false;
+                targetOpeningDirection = null;
+            }
+            
+            // Use normal pathfinding toward target
+            float desiredDirection = (float) Math.atan2(targetY - centerY, targetX - centerX);
+            
+            // Use Dead-End Filling for initial direction
+            if (pathfinder != null) {
+                desiredDirection = pathfinder.getDirectionToTarget(
+                    centerX, centerY, targetX, targetY);
+            }
+            
+            // Use Wall Awareness to avoid walls
+            if (wallAwareness != null) {
+                currentDirection = wallAwareness.findBestDirection(
+                    centerX, centerY, desiredDirection, width, height);
+            } else {
+                currentDirection = desiredDirection;
+            }
+        }
+        
+        return currentDirection;
+    }
+    
+    /**
+     * Normalizes an angle to 0-2π range
+     */
+    private float normalizeAngle(float angle) {
+        while (angle < 0) {
+            angle += Math.PI * 2;
+        }
+        while (angle >= Math.PI * 2) {
+            angle -= Math.PI * 2;
+        }
+        return angle;
+    }
+
     private void chasePlayer(Player player, float deltaTime) {
         // If unstucking, use random movement
         if (isUnstucking) {
@@ -499,22 +605,8 @@ public class Teacher extends Entity {
         float distance = (float) Math.sqrt(dx * dx + dy * dy);
 
         if (distance > 0) {
-            // Update direction to chase player using Dead-End Filling and Wall Awareness
-            float desiredDirection = (float) Math.atan2(dy, dx);
-
-            // Use Dead-End Filling for initial direction
-            if (pathfinder != null) {
-                desiredDirection = pathfinder.getDirectionToTarget(
-                        getCenterX(), getCenterY(), player.getCenterX(), player.getCenterY());
-            }
-
-            // Use Wall Awareness to avoid walls
-            if (wallAwareness != null) {
-                currentDirection = wallAwareness.findBestDirection(
-                        getCenterX(), getCenterY(), desiredDirection, width, height);
-            } else {
-                currentDirection = desiredDirection;
-            }
+            // Use vision-based direction
+            currentDirection = getVisionBasedDirection(player.getCenterX(), player.getCenterY(), deltaTime);
 
             float chaseSpeed = speed * CHASE_SPEED_MULTIPLIER;
             velocityX = (float) (Math.cos(currentDirection) * chaseSpeed);
@@ -806,6 +898,56 @@ public class Teacher extends Entity {
             // Fallback to colored rectangle
             canvas.drawRect(x, y, x + width, y + height, paint);
         }
+        
+        // Draw vision cone in debug mode
+        if (SHOW_VISION_CONE) {
+            if (visionCone != null) {
+                drawVisionCone(canvas);
+            }
+        }
+    }
+    
+    /**
+     * Draws the vision cone for debugging purposes
+     */
+    private void drawVisionCone(Canvas canvas) {
+        float centerX = getCenterX();
+        float centerY = getCenterY();
+        float length = visionCone.getLength();
+        float halfAngle = (float) (Math.PI / 8); // 22.5 degrees (half of 45 degrees)
+        
+        // Calculate cone vertices
+        // Center point (teacher position)
+        float startX = centerX;
+        float startY = centerY;
+        
+        // Left edge point
+        float leftAngle = currentDirection - halfAngle;
+        float leftX = centerX + (float) (Math.cos(leftAngle) * length);
+        float leftY = centerY + (float) (Math.sin(leftAngle) * length);
+        
+        // Right edge point
+        float rightAngle = currentDirection + halfAngle;
+        float rightX = centerX + (float) (Math.cos(rightAngle) * length);
+        float rightY = centerY + (float) (Math.sin(rightAngle) * length);
+        
+        // Create path for the cone triangle
+        Path conePath = new Path();
+        conePath.moveTo(startX, startY);
+        conePath.lineTo(leftX, leftY);
+        conePath.lineTo(rightX, rightY);
+        conePath.close();
+        
+        // Draw filled cone
+        canvas.drawPath(conePath, visionConePaint);
+        
+        // Draw outline
+        canvas.drawPath(conePath, visionConeOutlinePaint);
+        
+        // Draw center line (direction teacher is facing)
+        float centerEndX = centerX + (float) (Math.cos(currentDirection) * length);
+        float centerEndY = centerY + (float) (Math.sin(currentDirection) * length);
+        canvas.drawLine(centerX, centerY, centerEndX, centerEndY, visionConeOutlinePaint);
     }
 
     public boolean isChasing() {
@@ -937,6 +1079,20 @@ public class Teacher extends Entity {
      */
     public boolean isAway() {
         return isAway;
+    }
+    
+    /**
+     * Toggles vision cone visualization for all teachers (debug mode)
+     */
+    public static void toggleVisionConeVisualization() {
+        SHOW_VISION_CONE = !SHOW_VISION_CONE;
+    }
+    
+    /**
+     * Sets vision cone visualization for all teachers (debug mode)
+     */
+    public static void setVisionConeVisualization(boolean show) {
+        SHOW_VISION_CONE = show;
     }
 
     /**

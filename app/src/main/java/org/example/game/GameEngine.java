@@ -18,6 +18,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+enum CameraMode {
+    FOLLOW_PLAYER, // Camera automatically follows the player
+    MANUAL_PAN // Camera can be panned manually with touch gestures
+}
+
 public class GameEngine {
     private GameState state;
     private Player player;
@@ -27,12 +32,16 @@ public class GameEngine {
     private SchoolLayout schoolLayout;
     private float worldWidth = 2000;
     private float worldHeight = 2000;
+    private CameraMode cameraMode = CameraMode.FOLLOW_PLAYER; // Default: follow player
     private long lastUpdateTime;
     private int score = 0;
     private int friendsRescued = 0;
     private Paint backgroundPaint;
     private Paint corridorPaint;
     private Paint roomPaint;
+    private Paint principalOfficePaint;
+    private Paint principalOfficeFillPaint;
+    private Paint principalOfficeTextPaint;
     private static final float SQUARE_SIZE = 20f; // Size of each square in the pattern
     private Teacher teacherThatCaughtPlayer = null; // Track which teacher caught the player
 
@@ -92,12 +101,31 @@ public class GameEngine {
         this.roomPaint.setColor(Color.rgb(180, 180, 180)); // Darker gray for rooms
         this.roomPaint.setStyle(Paint.Style.FILL);
 
+        // Paint for principal's office (visible when bonus is active)
+        this.principalOfficeFillPaint = new Paint();
+        this.principalOfficeFillPaint.setColor(Color.rgb(255, 100, 100)); // Bright red fill
+        this.principalOfficeFillPaint.setStyle(Paint.Style.FILL);
+        this.principalOfficeFillPaint.setAlpha(200); // Semi-transparent
+
+        this.principalOfficePaint = new Paint();
+        this.principalOfficePaint.setColor(Color.rgb(255, 255, 0)); // Bright yellow border
+        this.principalOfficePaint.setStyle(Paint.Style.STROKE);
+        this.principalOfficePaint.setStrokeWidth(8f);
+
+        // Text paint for office label
+        this.principalOfficeTextPaint = new Paint();
+        this.principalOfficeTextPaint.setColor(Color.WHITE);
+        this.principalOfficeTextPaint.setTextSize(40f);
+        this.principalOfficeTextPaint.setAntiAlias(true);
+        this.principalOfficeTextPaint.setStyle(Paint.Style.FILL);
+        this.principalOfficeTextPaint.setFakeBoldText(true);
+
         // Create school layout
         this.schoolLayout = new SchoolLayout(worldWidth, worldHeight, spriteManager);
 
         initializeLevel();
     }
-    
+
     public SpriteManager getSpriteManager() {
         return spriteManager;
     }
@@ -285,7 +313,7 @@ public class GameEngine {
             // Store previous position for collision recovery
             float prevX = teacher.getX();
             float prevY = teacher.getY();
-            
+
             // Update teacher with player and friends information for guard/chase behavior
             teacher.update(deltaTime, schoolLayout, player, friends);
 
@@ -295,7 +323,7 @@ public class GameEngine {
                 CollisionDetector.resolveWallCollision(teacher, worldWidth, worldHeight);
                 teacher.onWallCollision();
             }
-            
+
             // Check brick wall collisions - resolve multiple times if needed
             boolean hitWall = CollisionDetector.checkWallCollision(teacher, schoolLayout.getWalls());
             if (hitWall) {
@@ -307,7 +335,7 @@ public class GameEngine {
                         break; // Successfully resolved
                     }
                 }
-                
+
                 // If still colliding after multiple attempts, notify teacher
                 if (hitWall) {
                     teacher.onWallCollision();
@@ -350,10 +378,11 @@ public class GameEngine {
             }
         }
 
-        // Check if principal bonus is active and all non-ignored teachers have arrived, or timeout
+        // Check if principal bonus is active and all non-ignored teachers have arrived,
+        // or timeout
         if (principalBonusActive) {
             principalBonusTimer += deltaTime;
-            
+
             boolean allTeachersArrived = true;
             for (Teacher teacher : teachers) {
                 // Only check teachers that are going to office, haven't reached it, and aren't
@@ -392,8 +421,11 @@ public class GameEngine {
             state = GameState.GAME_OVER;
         }
 
-        // Update camera
-        camera.update(player.getCenterX(), player.getCenterY());
+        // Update camera based on mode
+        if (cameraMode == CameraMode.FOLLOW_PLAYER) {
+            camera.update(player.getCenterX(), player.getCenterY());
+        }
+        // If MANUAL_PAN mode, camera position is controlled by touch gestures
     }
 
     public void draw(Canvas canvas) {
@@ -425,6 +457,27 @@ public class GameEngine {
 
         // Draw player - draw at world coordinates
         player.draw(canvas, 0, 0);
+
+        // Draw principal's office marker when bonus is active (on top of everything)
+        if (principalBonusActive) {
+            float[] officeLocation = schoolLayout.getPrincipalOfficeLocation();
+            float officeX = officeLocation[0];
+            float officeY = officeLocation[1];
+            float officeSize = 150f; // Larger size for better visibility
+
+            // Draw filled rectangle
+            canvas.drawRect(officeX - officeSize / 2, officeY - officeSize / 2,
+                    officeX + officeSize / 2, officeY + officeSize / 2, principalOfficeFillPaint);
+
+            // Draw bright yellow border
+            canvas.drawRect(officeX - officeSize / 2, officeY - officeSize / 2,
+                    officeX + officeSize / 2, officeY + officeSize / 2, principalOfficePaint);
+
+            // Draw "OFFICE" text label
+            String label = "OFFICE";
+            float textWidth = principalOfficeTextPaint.measureText(label);
+            canvas.drawText(label, officeX - textWidth / 2, officeY + 15, principalOfficeTextPaint);
+        }
 
         canvas.restore();
 
@@ -458,7 +511,8 @@ public class GameEngine {
             for (float x = alignedStartX; x < endX; x += SQUARE_SIZE) {
                 // Try to use tile sprite if available
                 if (spriteManager != null && spriteManager.getCorridorTileSprite() != null) {
-                    spriteManager.drawSprite(canvas, spriteManager.getCorridorTileSprite(), x, y, SQUARE_SIZE, SQUARE_SIZE);
+                    spriteManager.drawSprite(canvas, spriteManager.getCorridorTileSprite(), x, y, SQUARE_SIZE,
+                            SQUARE_SIZE);
                 } else {
                     canvas.drawRect(x, y, x + SQUARE_SIZE, y + SQUARE_SIZE, corridorPaint);
                 }
@@ -498,7 +552,8 @@ public class GameEngine {
                     if (room.contains(squareCenterX, squareCenterY)) {
                         // Try to use tile sprite if available
                         if (spriteManager != null && spriteManager.getRoomTileSprite() != null) {
-                            spriteManager.drawSprite(canvas, spriteManager.getRoomTileSprite(), x, y, SQUARE_SIZE, SQUARE_SIZE);
+                            spriteManager.drawSprite(canvas, spriteManager.getRoomTileSprite(), x, y, SQUARE_SIZE,
+                                    SQUARE_SIZE);
                         } else {
                             canvas.drawRect(x, y, x + SQUARE_SIZE, y + SQUARE_SIZE, roomPaint);
                         }
@@ -534,6 +589,35 @@ public class GameEngine {
 
         // Draw collected bonus icons on the right/top
         drawBonusIcons(canvas);
+
+        // Draw principal bonus countdown timer (middle/top position)
+        if (principalBonusActive) {
+            float remainingTime = PRINCIPAL_BONUS_TIMEOUT - principalBonusTimer;
+            if (remainingTime > 0) {
+                Paint timerPaint = new Paint();
+                timerPaint.setColor(Color.rgb(255, 100, 100)); // Red color for urgency
+                timerPaint.setTextSize(60);
+                timerPaint.setAntiAlias(true);
+                timerPaint.setStyle(Paint.Style.FILL);
+                timerPaint.setFakeBoldText(true);
+
+                // Draw background for better visibility
+                Paint bgPaint = new Paint();
+                bgPaint.setColor(Color.argb(220, 0, 0, 0)); // Semi-transparent black
+                bgPaint.setStyle(Paint.Style.FILL);
+
+                String timerText = String.format("%.1f", remainingTime);
+                float textWidth = timerPaint.measureText(timerText);
+                float padding = 30f;
+                float bgLeft = canvas.getWidth() / 2 - textWidth / 2 - padding;
+                float bgRight = canvas.getWidth() / 2 + textWidth / 2 + padding;
+                float bgTop = 50f;
+                float bgBottom = 130f;
+
+                canvas.drawRect(bgLeft, bgTop, bgRight, bgBottom, bgPaint);
+                canvas.drawText(timerText, canvas.getWidth() / 2 - textWidth / 2, 110, timerPaint);
+            }
+        }
 
         // Draw bonus message if active
         if (activeBonusMessage != null && bonusMessageTimer > 0) {
@@ -788,6 +872,48 @@ public class GameEngine {
         if (active) {
             // Reset timer when bonus is activated
             this.principalBonusTimer = 0f;
+        }
+    }
+
+    /**
+     * Pans the camera manually (used when in MANUAL_PAN mode)
+     * 
+     * @param dx Amount to pan in X direction (screen coordinates)
+     * @param dy Amount to pan in Y direction (screen coordinates)
+     */
+    public void panCamera(float dx, float dy) {
+        if (camera != null) {
+            camera.panBy(-dx, -dy); // Negative because we want to move world in opposite direction
+        }
+    }
+
+    /**
+     * Gets the current camera mode
+     */
+    public CameraMode getCameraMode() {
+        return cameraMode;
+    }
+
+    /**
+     * Sets the camera mode
+     */
+    public void setCameraMode(CameraMode mode) {
+        this.cameraMode = mode;
+        // If switching to follow player mode, immediately update camera to player
+        // position
+        if (mode == CameraMode.FOLLOW_PLAYER && player != null) {
+            camera.update(player.getCenterX(), player.getCenterY());
+        }
+    }
+
+    /**
+     * Toggles between FOLLOW_PLAYER and MANUAL_PAN modes
+     */
+    public void toggleCameraMode() {
+        if (cameraMode == CameraMode.FOLLOW_PLAYER) {
+            setCameraMode(CameraMode.MANUAL_PAN);
+        } else {
+            setCameraMode(CameraMode.FOLLOW_PLAYER);
         }
     }
 }

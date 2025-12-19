@@ -1,11 +1,13 @@
 package org.example.ui;
 
 import android.os.Bundle;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import org.example.R;
+import org.example.entities.Teacher;
 import org.example.game.GameEngine;
 import org.example.game.GameState;
 import org.example.game.GameView;
@@ -17,6 +19,7 @@ public class GameActivity extends AppCompatActivity {
     private QuestionManager questionManager;
     private Question currentQuestion;
     private volatile boolean questionShown = false;
+    private Switch visionConeSwitch;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,6 +33,16 @@ public class GameActivity extends AppCompatActivity {
         gameView = new GameView(this);
         if (container != null) {
             container.addView(gameView);
+        }
+        
+        // Set up vision cone toggle switch
+        visionConeSwitch = findViewById(R.id.vision_cone_switch);
+        if (visionConeSwitch != null) {
+            // Set initial state based on current setting
+            visionConeSwitch.setChecked(Teacher.SHOW_VISION_CONE);
+            visionConeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                Teacher.setVisionConeVisualization(isChecked);
+            });
         }
         
         // Set up joystick - wait for GameView to be ready

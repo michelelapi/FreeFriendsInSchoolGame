@@ -61,5 +61,31 @@ public class Camera {
         x = Math.max(0, Math.min(x, worldWidth - viewportWidth));
         y = Math.max(0, Math.min(y, worldHeight - viewportHeight));
     }
+    
+    /**
+     * Pans the camera by the specified amount
+     * @param dx Amount to pan in X direction (positive = right, negative = left)
+     * @param dy Amount to pan in Y direction (positive = down, negative = up)
+     */
+    public void panBy(float dx, float dy) {
+        x += dx;
+        y += dy;
+        // Clamp camera to world boundaries
+        x = Math.max(0, Math.min(x, worldWidth - viewportWidth));
+        y = Math.max(0, Math.min(y, worldHeight - viewportHeight));
+    }
+    
+    /**
+     * Sets the camera position directly
+     * @param x New X position
+     * @param y New Y position
+     */
+    public void setPosition(float x, float y) {
+        this.x = x;
+        this.y = y;
+        // Clamp camera to world boundaries
+        this.x = Math.max(0, Math.min(this.x, worldWidth - viewportWidth));
+        this.y = Math.max(0, Math.min(this.y, worldHeight - viewportHeight));
+    }
 }
 
